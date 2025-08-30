@@ -1,12 +1,6 @@
----
-title: youngerme
-app_file: chatbot.py
-sdk: gradio
-sdk_version: 5.44.0
----
 # Younger Me Chatbot
 
-A chatbot that allows you to chat with your younger self based on your previous writings and memories.
+A gradio chatbot that allows you to chat with your younger self based on your previous writings and memories.
 
 <img width="512" height="512" alt="younger_me_chatbot" src="https://github.com/user-attachments/assets/b36e69e2-bf10-4f2e-8bdc-eb65185020bf" />
 
