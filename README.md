@@ -2,7 +2,7 @@
 
 A chatbot that allows you to chat with your younger self based on your previous writings and memories.
 
-<img width="1024" height="1024" alt="younger_me_chatbot" src="https://github.com/user-attachments/assets/b36e69e2-bf10-4f2e-8bdc-eb65185020bf" />
+<img width="512" height="512" alt="younger_me_chatbot" src="https://github.com/user-attachments/assets/b36e69e2-bf10-4f2e-8bdc-eb65185020bf" />
 
 ## Usage
 
