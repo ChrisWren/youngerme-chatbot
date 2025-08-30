@@ -40,7 +40,7 @@ Thumbs.db
 logs/
 
 # Personal documents (optional - you may want to track these)
-docs/
+docs/*
 
 # Claude
 .claude/
