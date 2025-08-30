@@ -1,0 +1,51 @@
+# Environment variables
+.env
+.env.*
+
+config.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv/
+
+# Vector store and indexes
+storage/
+*.json.backup
+*.pkl
+
+
+# API Keys (if stored in files)
+*.key
+config_local.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Personal documents (optional - you may want to track these)
+docs/
+
+# Claude
+.claude/
+
+# Gradio
+flagged/
+.gradio
+
