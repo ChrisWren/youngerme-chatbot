@@ -5,6 +5,7 @@ This module contains all the code needed to index documents and set up the Llama
 
 import os
 import json
+import shutil
 from pathlib import Path
 from typing import Optional, List
 from pydantic import BaseModel, Field, field_validator
@@ -135,6 +136,35 @@ def load_or_create_index(storage_directory: str = "./storage", docs_directory: s
     return construct_index(docs_directory)
 
 
+def setup_initial_files(docs_directory: str, storage_directory: str = "./storage") -> None:
+    """Set up initial config, docs, and storage from sample files if they don't exist."""
+    docs_path = Path(docs_directory)
+    storage_path = Path(storage_directory)
+    config_path = Path("config.json")
+    
+    sample_config_path = Path("sample/config/config.json")
+    sample_docs_path = Path("sample/docs")
+    sample_storage_path = Path("sample/storage")
+    
+    # Copy sample config if config.json doesn't exist
+    if not config_path.exists() and sample_config_path.exists():
+        print(f"Copying sample config to config.json...")
+        shutil.copy2(sample_config_path, config_path)
+        print("Created config.json from sample")
+    
+    # Copy sample docs if docs directory doesn't exist
+    if not docs_path.exists() and sample_docs_path.exists():
+        print(f"Copying sample docs to {docs_directory}...")
+        shutil.copytree(sample_docs_path, docs_path)
+        print(f"Created {docs_directory} directory from sample")
+    
+    # Copy sample storage if storage directory doesn't exist
+    if not storage_path.exists() and sample_storage_path.exists():
+        print(f"Copying sample storage to {storage_directory}...")
+        shutil.copytree(sample_storage_path, storage_path)
+        print(f"Created {storage_directory} directory from sample")
+
+
 def index_documents(
     docs_directory: str,
     storage_directory: str = "./storage",
@@ -155,6 +185,9 @@ def index_documents(
     Returns:
         VectorStoreIndex: The created or loaded index
     """
+    # Set up initial files from samples if needed
+    setup_initial_files(docs_directory, storage_directory)
+    
     docs_path = Path(docs_directory)
     storage_path = Path(storage_directory)
     
