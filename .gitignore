@@ -16,7 +16,7 @@ ENV/
 .venv/
 
 # Vector store and indexes
-storage/
+storage/*
 *.json.backup
 *.pkl
 
