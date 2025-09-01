@@ -19,7 +19,7 @@ def load_config(config_path: str = "config.json") -> dict:
         print(f"Config file {config_path} not found. Using defaults.")
         return {
             "person": {"name": "Assistant", "docs_directory": "docs"},
-            "chatbot": {"title": "AI Chatbot", "description": "Chat with AI"},
+            "chatbot": {"title": "Younger Me Chatbot", "description": "Chat with your younger self"},
             "retrieval": {"similarity_threshold": 0.7, "max_chunks": 5, "context_history_length": 3}
         }
 
