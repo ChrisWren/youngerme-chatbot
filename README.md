@@ -4,7 +4,7 @@ emoji: 🤖
 colorFrom: purple
 colorTo: blue
 sdk: gradio
-sdk_version: "4.0.0"
+sdk_version: "5.44.1"
 app_file: chatbot.py
 pinned: false
 ---
