@@ -5,7 +5,7 @@ colorFrom: purple
 colorTo: blue
 sdk: gradio
 sdk_version: "5.44.1"
-app_file: index_documents.py && chatbot.py
+app_file: chatbot.py
 pinned: false
 ---
 
