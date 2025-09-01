@@ -1,3 +1,14 @@
+---
+title: Younger Me Chatbot
+emoji: 🤖
+colorFrom: purple
+colorTo: blue
+sdk: gradio
+sdk_version: "4.0.0"
+app_file: chatbot.py
+pinned: false
+---
+
 # Younger Me Chatbot
 
 A gradio chatbot that allows you to chat with your younger self based on your previous writings and memories.
@@ -22,3 +33,5 @@ OpenAI API key set via the `OPENAI_API_KEY` environment variable.
 2. Create a new branch
 3. Make your changes and commit them
 4. Push your changes to your fork
+
+Check out the configuration reference at https://huggingface.co/docs/hub/spaces-config-reference
