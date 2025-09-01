@@ -1,40 +1,20 @@
-name: Index Documents
-
+name: Sync to Hugging Face hub
 on:
   push:
-    branches:
-      - main
+    branches: [main]
+
+  # to run this workflow manually from the Actions tab
+  workflow_dispatch:
 
 jobs:
-  index:
+  sync-to-hub:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout
-      uses: actions/checkout@v2
-
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.9'
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-
-    - name: Run document indexing
-      env:
-        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      run: python index_documents.py
-
-    - name: Log in to Hugging Face
-      run: python -c 'import huggingface_hub; huggingface_hub.login(token="${{ secrets.hf_token }}")'
-
-    - name: Deploy to Spaces
-      run: |
-        gradio deploy \
-          --title "Younger Me Chatbot" \
-          --description "A gradio chatbot that allows you to chat with your younger self based on your previous writings and memories." \
-          --privacy public \
-          --license apache-2.0
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          lfs: true
+      - name: Push to hub
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: git push https://ChrisWren:$HF_TOKEN@huggingface.co/spaces/ChrisWren/youngerme main 
