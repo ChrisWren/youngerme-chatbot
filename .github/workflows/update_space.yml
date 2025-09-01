@@ -32,4 +32,9 @@ jobs:
       run: python -c 'import huggingface_hub; huggingface_hub.login(token="${{ secrets.hf_token }}")'
 
     - name: Deploy to Spaces
-      run: gradio deploy
+      run: |
+        gradio deploy \
+          --title "Younger Me Chatbot" \
+          --description "A gradio chatbot that allows you to chat with your younger self based on your previous writings and memories." \
+          --privacy public \
+          --license apache-2.0
