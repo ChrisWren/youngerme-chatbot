@@ -26,10 +26,10 @@ jobs:
     - name: Run document indexing
       env:
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      run: python index_documents.py --docs docs --storage ./storage
+      run: python index_documents.py
 
-    - name: Upload indexed data
-      uses: actions/upload-artifact@v3
-      with:
-        name: indexed-documents
-        path: storage/
+    - name: Log in to Hugging Face
+      run: python -c 'import huggingface_hub; huggingface_hub.login(token="${{ secrets.hf_token }}")'
+
+    - name: Deploy to Spaces
+      run: gradio deploy

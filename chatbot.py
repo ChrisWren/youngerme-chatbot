@@ -6,10 +6,7 @@ from pathlib import Path
 import json
 
 from indexing import ServiceConfig, setup_settings, load_or_create_index
-from prompts import DOCUMENT_TOPICS_ANALYSIS_PROMPT, CHATBOT_RESPONSE_PROMPT
-
-
-
+from prompts import DOCUMENT_TOPICS_ANALYSIS_PROMPT, CHATBOT_RESPONSE_PROMPT, CHATBOT_TOPIC_RESPONSE_PROMPT
 
 def load_config(config_path: str = "config.json") -> dict:
     """Load configuration from JSON file."""
@@ -23,13 +20,6 @@ def load_config(config_path: str = "config.json") -> dict:
             "chatbot": {"title": "AI Chatbot", "description": "Chat with AI"},
             "retrieval": {"similarity_threshold": 0.7, "max_chunks": 5, "context_history_length": 3}
         }
-
-
-
-
-
-
-
 
 def get_document_topics(index: VectorStoreIndex, config: dict) -> List[dict]:
     """Analyze the indexed documents to identify key life areas/topics."""
@@ -92,52 +82,6 @@ def get_document_topics(index: VectorStoreIndex, config: dict) -> List[dict]:
             {"word": "Hobbies", "emoji": "🎨"}
         ]
 
-
-def generate_short_questions(examples: List[str]) -> List[dict]:
-    """Generate short one-word versions of example questions with emojis."""
-    question_keywords = {
-        "transition": {"word": "Transition", "emoji": "🔄"},
-        "inspired": {"word": "Inspiration", "emoji": "💡"}, "inspire": {"word": "Inspiration", "emoji": "💡"},
-        "halo": {"word": "Gaming", "emoji": "🎮"}, "player": {"word": "Gaming", "emoji": "🎮"}, 
-        "game": {"word": "Gaming", "emoji": "🎮"}, "gaming": {"word": "Gaming", "emoji": "🎮"},
-        "music": {"word": "Music", "emoji": "🎵"}, "concert": {"word": "Music", "emoji": "🎵"}, 
-        "band": {"word": "Music", "emoji": "🎵"}, "song": {"word": "Music", "emoji": "🎵"},
-        "software": {"word": "Coding", "emoji": "💻"}, "engineer": {"word": "Coding", "emoji": "💻"}, 
-        "development": {"word": "Coding", "emoji": "💻"}, "web": {"word": "Coding", "emoji": "💻"},
-        "balance": {"word": "Balance", "emoji": "⚖️"}, "motivate": {"word": "Motivation", "emoji": "🚀"}, 
-        "meaning": {"word": "Purpose", "emoji": "🎯"}, "reflect": {"word": "Thoughts", "emoji": "💭"},
-        "trade": {"word": "Philosophy", "emoji": "🤔"}, "interaction": {"word": "Social", "emoji": "🤝"}, 
-        "relationship": {"word": "People", "emoji": "👥"}, "friend": {"word": "People", "emoji": "👥"},
-        "experience": {"word": "Stories", "emoji": "📖"}, "memory": {"word": "Memories", "emoji": "📸"}, 
-        "story": {"word": "Stories", "emoji": "📖"}, "share": {"word": "Stories", "emoji": "📖"},
-        "life": {"word": "Life", "emoji": "🌟"}, "personal": {"word": "Personal", "emoji": "🧠"}, 
-        "yourself": {"word": "About", "emoji": "👤"}, "who": {"word": "Identity", "emoji": "🪪"},
-        "work": {"word": "Work", "emoji": "💼"}, "job": {"word": "Career", "emoji": "💼"}, 
-        "study": {"word": "School", "emoji": "🎓"}, "learn": {"word": "Learning", "emoji": "📚"},
-        "advice": {"word": "Advice", "emoji": "💡"}, "hobbies": {"word": "Hobbies", "emoji": "🎨"},
-        "interests": {"word": "Interests", "emoji": "⭐"}, "passion": {"word": "Passion", "emoji": "❤️"}
-    }
-    
-    short_versions = []
-    for example in examples:
-        # Find the best keyword match
-        short_word = "Ask"
-        emoji = "❓"  # default
-        example_lower = example.lower()
-        
-        for keyword, data in question_keywords.items():
-            if keyword in example_lower:
-                short_word = data["word"]
-                emoji = data["emoji"]
-                break
-        
-        short_versions.append({
-            "short": short_word,
-            "emoji": emoji,
-            "full": example
-        })
-    
-    return short_versions
 
 
 def chatbot(input_text, history, index: Optional[VectorStoreIndex] = None, config: dict = None):
@@ -232,13 +176,11 @@ def main():
     def chatbot_with_index(message, history):
         return chatbot(message, history, index, config)
     
-    # Create custom Gradio interface with persistent example buttons
+    # Create custom Gradio interface
     chatbot_config = config.get("chatbot", {})
-    examples = chatbot_config.get("examples", ["Tell me about yourself"])
     
-    # Get life topics from documents and short questions
+    # Get life topics from documents
     topics = get_document_topics(index, config)
-    short_questions = generate_short_questions(examples)
     
     with gr.Blocks(title=chatbot_config.get("title", "AI Chatbot"), css="""
         .scroll-buttons {
@@ -287,16 +229,11 @@ def main():
         chatbot_ui = gr.Chatbot()
         msg = gr.Textbox(label="Message", placeholder="Type your message here...")
         
-        gr.Markdown("## Example topics")
+        gr.Markdown("## Topics")
         with gr.Row(elem_classes="scroll-buttons"):
             all_buttons = []
             
-            # Add quick question buttons first
-            for q_data in short_questions:
-                btn = gr.Button(f"{q_data['emoji']} {q_data['short']}")
-                all_buttons.append(('question', btn, q_data['full']))
-            
-            # Add topic buttons after
+            # Add topic buttons
             for topic in topics:
                 btn = gr.Button(f"{topic['emoji']} {topic['word']}")
                 all_buttons.append(('topic', btn, topic['word']))
@@ -312,32 +249,19 @@ def main():
             history[-1] = [message, response]
             yield history, ""
         
-        def handle_example_click(example_text):
-            return example_text
-        
         def handle_topic_click(topic_word):
-            return f"Tell me stories and share your experiences related to {topic_word}. Go into detail about specific memories, events, and thoughts you have about this area of your life. Share multiple examples if you have them."
+            return CHATBOT_TOPIC_RESPONSE_PROMPT.format(topic_word=topic_word)
         
-        # Connect all buttons based on their type  
+        # Connect topic buttons
         for button_type, btn, data in all_buttons:
-            if button_type == 'question':
-                btn.click(
-                    lambda ex=data: handle_example_click(ex),
-                    outputs=[msg]
-                ).then(
-                    respond, [msg, chatbot_ui], [chatbot_ui, msg]
-                )
-            elif button_type == 'topic':
-                btn.click(
-                    lambda t=data: handle_topic_click(t),
-                    outputs=[msg]
-                ).then(
-                    respond, [msg, chatbot_ui], [chatbot_ui, msg]
-                )
+            btn.click(
+                lambda t=data: handle_topic_click(t),
+                outputs=[msg]
+            ).then(
+                respond, [msg, chatbot_ui], [chatbot_ui, msg]
+            )
         
         msg.submit(respond, [msg, chatbot_ui], [chatbot_ui, msg])
-    
-    # Remove the old interface creation
     
     iface.launch(share=True)
 
