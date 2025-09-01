@@ -4,6 +4,8 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 from pathlib import Path
 import json
+import subprocess
+import os
 
 from indexing import ServiceConfig, setup_settings, load_or_create_index
 from prompts import DOCUMENT_TOPICS_ANALYSIS_PROMPT, CHATBOT_RESPONSE_PROMPT, CHATBOT_TOPIC_RESPONSE_PROMPT
@@ -160,6 +162,23 @@ pass
 
 def main():
     """Main function to launch the chatbot interface."""
+    # Run startup script to ensure storage directory is properly set up
+    print("Running startup script to check storage setup...")
+    try:
+        startup_script_path = os.path.join(os.path.dirname(__file__), "startup.sh")
+        result = subprocess.run([startup_script_path], capture_output=True, text=True)
+        if result.returncode == 0:
+            print("✅ Startup script completed successfully")
+            if result.stdout:
+                print(result.stdout.strip())
+        else:
+            print(f"⚠️  Startup script exited with code {result.returncode}")
+            if result.stderr:
+                print(f"Error output: {result.stderr.strip()}")
+    except Exception as e:
+        print(f"⚠️  Could not run startup script: {e}")
+        print("Continuing without startup script...")
+
     # Load configuration
     config = load_config()
     
