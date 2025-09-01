@@ -6,20 +6,8 @@ Run this script to index documents before starting the chatbot.
 
 import os
 import sys
-from typing import Optional
 
-from indexing import ServiceConfig, index_documents
-
-
-
-
-
-
-
-
-
-
-
+from indexing import index_documents
 
 def main():
     """Main entry point for the indexing script."""
@@ -60,6 +48,28 @@ def main():
         print("Error: OpenAI API key required. Set OPENAI_API_KEY environment variable or use --api-key")
         sys.exit(1)
     
+    # Check if docs directory exists
+    docs_path = os.path.join(os.getcwd(), args.docs)
+    if not os.path.exists(docs_path):
+        print(f"Documents directory '{args.docs}' not found.")
+        print("Using sample data instead...")
+
+        # Import the setup function from indexing module
+        from indexing import setup_initial_files
+
+        # Set up sample files
+        setup_initial_files(args.docs, args.storage)
+
+        # Check if sample storage was copied
+        storage_path = os.path.join(os.getcwd(), args.storage)
+        if os.path.exists(storage_path):
+            print("\nSample data and pre-indexed storage loaded successfully!")
+            print(f"Storage location: {os.path.abspath(args.storage)}")
+            print("Ready to start chatbot with sample data.")
+        else:
+            print("Warning: Sample storage not found. You may need to run indexing.")
+        return
+
     try:
         index = index_documents(
             docs_directory=args.docs,
@@ -70,7 +80,7 @@ def main():
         print(f"\nIndex created successfully!")
         print(f"Documents indexed: {len(index.docstore.docs)} documents")
         print(f"Storage location: {os.path.abspath(args.storage)}")
-        
+
     except Exception as e:
         print(f"Error during indexing: {e}")
         sys.exit(1)
