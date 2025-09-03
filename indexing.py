@@ -19,6 +19,11 @@ import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 from typing import Any, List, Optional, Dict
 import spaces
+import os
+
+# Disable CUDA multiprocessing sharing to prevent CUDA context issues
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
 def get_device() -> str:
@@ -91,13 +96,20 @@ class HuggingFaceLLM(CustomLLM):
                 # Use 4-bit quantization for memory efficiency
                 self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
 
-                # For model loading, use device_map="auto" for automatic device placement
-                # For pipeline, use the specific device
-                device_map = "auto" if self.device != "cpu" else None
+                # Set up device configuration properly for Spaces
+                if self.device == "cuda" and torch.cuda.is_available():
+                    device_map = "auto"
+                    torch_dtype = torch.float16
+                elif self.device == "cpu":
+                    device_map = None
+                    torch_dtype = torch.float32  # CPU doesn't support float16 well
+                else:
+                    device_map = "auto"
+                    torch_dtype = torch.float16
 
                 self.model = AutoModelForCausalLM.from_pretrained(
                     self.model_name,
-                    torch_dtype=torch.float16,
+                    torch_dtype=torch_dtype,
                     device_map=device_map,
                     load_in_4bit=True,
                     bnb_4bit_compute_dtype=torch.float16,
@@ -105,15 +117,21 @@ class HuggingFaceLLM(CustomLLM):
                     bnb_4bit_quant_type="nf4"
                 )
 
-                # Create text generation pipeline
-                # Use device index for GPU, or -1 for CPU
-                device_idx = 0 if self.device == "cuda" else (-1 if self.device == "cpu" else None)
+                # Create text generation pipeline with proper device handling
+                if self.device == "cuda" and torch.cuda.is_available():
+                    device_idx = 0
+                    # Ensure the model is on the correct device
+                    self.model = self.model.to('cuda')
+                elif self.device == "cpu":
+                    device_idx = -1
+                else:
+                    device_idx = 0
 
                 self.pipeline = pipeline(
                     "text-generation",
                     model=self.model,
                     tokenizer=self.tokenizer,
-                    torch_dtype=torch.float16,
+                    torch_dtype=torch_dtype,
                     device=device_idx,
                     max_new_tokens=self.max_new_tokens,
                     temperature=self.temperature,
@@ -138,16 +156,21 @@ class HuggingFaceLLM(CustomLLM):
             formatted_prompt = prompt
 
         try:
-            # Generate response
-            outputs = self.pipeline(
-                formatted_prompt,
-                max_new_tokens=self.max_new_tokens,
-                temperature=self.temperature,
-                do_sample=True,
-                top_p=0.9,
-                repetition_penalty=1.1,
-                pad_token_id=self.tokenizer.eos_token_id
-            )
+            # Ensure CUDA context is active if using GPU
+            if self.device == "cuda" and torch.cuda.is_available():
+                torch.cuda.synchronize()
+
+            # Generate response with proper error handling
+            with torch.no_grad():
+                outputs = self.pipeline(
+                    formatted_prompt,
+                    max_new_tokens=self.max_new_tokens,
+                    temperature=self.temperature,
+                    do_sample=True,
+                    top_p=0.9,
+                    repetition_penalty=1.1,
+                    pad_token_id=self.tokenizer.eos_token_id
+                )
 
             # Extract the generated text
             generated_text = outputs[0]['generated_text']
