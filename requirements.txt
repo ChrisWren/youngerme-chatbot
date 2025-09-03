@@ -8,3 +8,4 @@ spaces>=0.10.0
 accelerate>=0.20.0
 bitsandbytes>=0.41.0
 scipy>=1.10.0
+llama-index-embeddings-huggingface>=0.2.0
