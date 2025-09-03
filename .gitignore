@@ -2,7 +2,7 @@
 .env
 .env.*
 
-config.json
+./config.json
 
 # Python
 __pycache__/

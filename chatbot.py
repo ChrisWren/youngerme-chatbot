@@ -9,6 +9,13 @@ import os
 import spaces
 
 from indexing import ServiceConfig, setup_settings, load_or_create_index
+
+# Configure your model here
+MODEL_CONFIG = ServiceConfig(
+    model_name="mistralai/Mistral-7B-Instruct-v0.1",  # Change this to your preferred model
+    temperature=0.7,                                  # Adjust creativity (0.0-2.0)
+    num_outputs=512                                   # Max tokens to generate
+)
 from prompts import DOCUMENT_TOPICS_ANALYSIS_PROMPT, CHATBOT_RESPONSE_PROMPT, CHATBOT_TOPIC_RESPONSE_PROMPT
 
 def load_config(config_path: str = "config.json") -> dict:
@@ -187,8 +194,14 @@ def main():
     
     # Load the index once at startup
     try:
+        # Set up the model configuration before loading index
+        setup_settings(MODEL_CONFIG)
+
         index = load_or_create_index(docs_directory=config["person"]["docs_directory"])
         print("Index loaded successfully!")
+        print(f"Using model: {MODEL_CONFIG.model_name}")
+        print(f"Temperature: {MODEL_CONFIG.temperature}")
+        print(f"Max tokens: {MODEL_CONFIG.num_outputs}")
     except Exception as e:
         print(f"Error loading index: {e}")
         print("Please run 'python index_documents.py' first to create the vector database.")

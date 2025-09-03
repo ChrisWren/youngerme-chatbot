@@ -1,12 +1,61 @@
 #!/bin/bash
 
-# Startup script to ensure storage directory exists with sample data
-# This script copies sample storage files to the storage directory if they don't exist
+# Startup script to ensure config, docs, and storage directories exist with sample data
+# This script copies sample files to their respective directories if they don't exist
 
-echo "Checking storage directory..."
+echo "Checking directories and config files..."
 
 STORAGE_DIR="./storage"
 SAMPLE_STORAGE_DIR="./sample/storage"
+
+DOCS_DIR="./docs"
+SAMPLE_DOCS_DIR="./sample/docs"
+
+CONFIG_FILE="./config.json"
+SAMPLE_CONFIG_FILE="./sample/config/config.json"
+
+# Check if config file exists
+if [ ! -f "$CONFIG_FILE" ]; then
+    if [ -f "$SAMPLE_CONFIG_FILE" ]; then
+        echo "Config file does not exist. Copying sample config..."
+        cp "$SAMPLE_CONFIG_FILE" "$CONFIG_FILE"
+
+        if [ $? -eq 0 ]; then
+            echo "✅ Successfully copied sample config.json"
+            echo "You can edit config.json to customize your chatbot settings"
+        else
+            echo "❌ Error: Failed to copy sample config file"
+            exit 1
+        fi
+    else
+        echo "⚠️  Warning: Sample config file not found at $SAMPLE_CONFIG_FILE"
+    fi
+else
+    echo "✅ Config file already exists"
+fi
+
+# Check if docs directory exists
+if [ ! -d "$DOCS_DIR" ]; then
+    if [ -d "$SAMPLE_DOCS_DIR" ]; then
+        echo "Docs directory does not exist. Copying sample docs..."
+        cp -r "$SAMPLE_DOCS_DIR" "$DOCS_DIR"
+
+        if [ $? -eq 0 ]; then
+            echo "✅ Successfully copied sample docs directory"
+            echo "Files copied:"
+            ls -la "$DOCS_DIR"
+        else
+            echo "❌ Error: Failed to copy sample docs directory"
+            exit 1
+        fi
+    else
+        echo "⚠️  Warning: Sample docs directory not found at $SAMPLE_DOCS_DIR"
+        mkdir -p "$DOCS_DIR"
+        echo "Created empty docs directory. Add your documents here."
+    fi
+else
+    echo "✅ Docs directory already exists"
+fi
 
 # Check if storage directory exists
 if [ ! -d "$STORAGE_DIR" ]; then
@@ -48,3 +97,7 @@ else
 fi
 
 echo "Startup check complete!"
+echo ""
+echo "Ready to run:"
+echo "  python chatbot.py          # Start the chatbot interface"
+echo "  python index_documents.py  # Re-index documents if needed"

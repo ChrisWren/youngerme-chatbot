@@ -1,0 +1,23 @@
+{
+  "person": {
+    "name": "Your Name",
+    "description": "A brief description of the person this chatbot represents. Include their background, interests, expertise, and personality traits that define them.",
+    "docs_directory": "docs"
+  },
+  "chatbot": {
+    "title": "Your Chatbot Name",
+    "description": "A concise description of what this chatbot is about and what kind of conversations it can have. This appears in the chatbot interface.",
+    "examples": [
+      "What is your background and expertise?",
+      "Can you tell me about your interests and hobbies?",
+      "What inspired you to pursue your current path?",
+      "How do you approach problem-solving?",
+      "What are some of your most memorable experiences?"
+    ]
+  },
+  "retrieval": {
+    "similarity_threshold": 0.7,
+    "max_chunks": 5,
+    "context_history_length": 3
+  }
+}
