@@ -97,7 +97,3 @@ else
 fi
 
 echo "Startup check complete!"
-echo ""
-echo "Ready to run:"
-echo "  python chatbot.py          # Start the chatbot interface"
-echo "  python index_documents.py  # Re-index documents if needed"

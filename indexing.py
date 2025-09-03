@@ -21,6 +21,16 @@ from typing import Any, List, Optional, Dict
 import spaces
 
 
+def get_device() -> str:
+    """Get the best available device for PyTorch operations."""
+    if torch.cuda.is_available():
+        return "cuda"
+    elif torch.backends.mps.is_available():
+        return "mps"
+    else:
+        return "cpu"
+
+
 class ServiceConfig(BaseModel):
     num_outputs: int = Field(default=512, ge=1, le=4096)
     max_chunk_overlap: int = Field(default=20, ge=0)
@@ -44,7 +54,7 @@ class HuggingFaceLLM(CustomLLM):
     model_name: str = "mistralai/Mistral-7B-Instruct-v0.1"
     temperature: float = 0.7
     max_new_tokens: int = 512
-    device: str = "auto"
+    device: str = Field(default_factory=get_device)
     model: Any = None
     tokenizer: Any = None
     pipeline: Any = None
@@ -54,9 +64,13 @@ class HuggingFaceLLM(CustomLLM):
         model_name: str = "mistralai/Mistral-7B-Instruct-v0.1",
         temperature: float = 0.7,
         max_new_tokens: int = 512,
-        device: str = "auto",
+        device: Optional[str] = None,
         **kwargs: Any
     ) -> None:
+        # Set device if not provided
+        if device is None:
+            device = get_device()
+
         super().__init__(
             model_name=model_name,
             temperature=temperature,
@@ -76,10 +90,15 @@ class HuggingFaceLLM(CustomLLM):
             try:
                 # Use 4-bit quantization for memory efficiency
                 self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+
+                # For model loading, use device_map="auto" for automatic device placement
+                # For pipeline, use the specific device
+                device_map = "auto" if self.device != "cpu" else None
+
                 self.model = AutoModelForCausalLM.from_pretrained(
                     self.model_name,
                     torch_dtype=torch.float16,
-                    device_map=self.device,
+                    device_map=device_map,
                     load_in_4bit=True,
                     bnb_4bit_compute_dtype=torch.float16,
                     bnb_4bit_use_double_quant=True,
@@ -87,12 +106,15 @@ class HuggingFaceLLM(CustomLLM):
                 )
 
                 # Create text generation pipeline
+                # Use device index for GPU, or -1 for CPU
+                device_idx = 0 if self.device == "cuda" else (-1 if self.device == "cpu" else None)
+
                 self.pipeline = pipeline(
                     "text-generation",
                     model=self.model,
                     tokenizer=self.tokenizer,
                     torch_dtype=torch.float16,
-                    device_map=self.device,
+                    device=device_idx,
                     max_new_tokens=self.max_new_tokens,
                     temperature=self.temperature,
                     do_sample=True,
@@ -174,7 +196,7 @@ def setup_settings(config: Optional[ServiceConfig] = None) -> None:
     # Set up embedding model with sentence transformers
     Settings.embed_model = HuggingFaceEmbedding(
         model_name="sentence-transformers/all-MiniLM-L6-v2",
-        device="auto"
+        device=get_device()
     )
 
     # Set chunk size
