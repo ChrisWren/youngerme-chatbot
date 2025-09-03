@@ -6,6 +6,7 @@ from pathlib import Path
 import json
 import subprocess
 import os
+import spaces
 
 from indexing import ServiceConfig, setup_settings, load_or_create_index
 from prompts import DOCUMENT_TOPICS_ANALYSIS_PROMPT, CHATBOT_RESPONSE_PROMPT, CHATBOT_TOPIC_RESPONSE_PROMPT
@@ -23,6 +24,7 @@ def load_config(config_path: str = "config.json") -> dict:
             "retrieval": {"similarity_threshold": 0.7, "max_chunks": 5, "context_history_length": 3}
         }
 
+@spaces.GPU
 def get_document_topics(index: VectorStoreIndex, config: dict) -> List[dict]:
     """Analyze the indexed documents to identify key life areas/topics."""
     
@@ -86,6 +88,7 @@ def get_document_topics(index: VectorStoreIndex, config: dict) -> List[dict]:
 
 
 
+@spaces.GPU
 def chatbot(input_text, history, index: Optional[VectorStoreIndex] = None, config: dict = None):
     try:
         chatbot_input = ChatbotInput(text=input_text)

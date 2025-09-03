@@ -11,8 +11,14 @@ from typing import Optional, List
 from pydantic import BaseModel, Field, field_validator
 
 from llama_index.core import SimpleDirectoryReader, VectorStoreIndex, Settings, StorageContext, load_index_from_storage
-from llama_index.llms.openai import OpenAI
-from llama_index.embeddings.openai import OpenAIEmbedding
+from llama_index.core.llms import CustomLLM, CompletionResponse, CompletionResponseGen
+from llama_index.core.llms.callbacks import llm_completion_callback
+from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+
+import torch
+from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
+from typing import Any, List, Optional, Dict
+import spaces
 
 
 class ServiceConfig(BaseModel):
@@ -21,7 +27,7 @@ class ServiceConfig(BaseModel):
     chunk_size_limit: int = Field(default=600, ge=1)
     max_input_size: int = Field(default=4096, ge=1)
     temperature: float = Field(default=0.7, ge=0.0, le=2.0)
-    model_name: str = Field(default="gpt-3.5-turbo")
+    model_name: str = Field(default="mistralai/Mistral-7B-Instruct-v0.1")
 
     @field_validator('max_input_size')
     @classmethod
@@ -32,21 +38,145 @@ class ServiceConfig(BaseModel):
         return v
 
 
+class HuggingFaceLLM(CustomLLM):
+    """Custom LLM class for Hugging Face models with ZeroGPU support."""
+
+    model_name: str = "mistralai/Mistral-7B-Instruct-v0.1"
+    temperature: float = 0.7
+    max_new_tokens: int = 512
+    device: str = "auto"
+    model: Any = None
+    tokenizer: Any = None
+    pipeline: Any = None
+
+    def __init__(
+        self,
+        model_name: str = "mistralai/Mistral-7B-Instruct-v0.1",
+        temperature: float = 0.7,
+        max_new_tokens: int = 512,
+        device: str = "auto",
+        **kwargs: Any
+    ) -> None:
+        super().__init__(
+            model_name=model_name,
+            temperature=temperature,
+            max_new_tokens=max_new_tokens,
+            device=device,
+            **kwargs
+        )
+
+    @classmethod
+    def class_name(cls) -> str:
+        return "HuggingFace_LLM"
+
+    def _load_model(self):
+        """Load the model and tokenizer if not already loaded."""
+        if self.model is None or self.tokenizer is None:
+            print(f"Loading model: {self.model_name}")
+            try:
+                # Use 4-bit quantization for memory efficiency
+                self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+                self.model = AutoModelForCausalLM.from_pretrained(
+                    self.model_name,
+                    torch_dtype=torch.float16,
+                    device_map=self.device,
+                    load_in_4bit=True,
+                    bnb_4bit_compute_dtype=torch.float16,
+                    bnb_4bit_use_double_quant=True,
+                    bnb_4bit_quant_type="nf4"
+                )
+
+                # Create text generation pipeline
+                self.pipeline = pipeline(
+                    "text-generation",
+                    model=self.model,
+                    tokenizer=self.tokenizer,
+                    torch_dtype=torch.float16,
+                    device_map=self.device,
+                    max_new_tokens=self.max_new_tokens,
+                    temperature=self.temperature,
+                    do_sample=True,
+                    top_p=0.9,
+                    repetition_penalty=1.1,
+                )
+                print("Model loaded successfully!")
+            except Exception as e:
+                print(f"Error loading model: {e}")
+                raise
+
+    @spaces.GPU
+    def complete(self, prompt: str, **kwargs: Any) -> CompletionResponse:
+        """Complete a prompt using the Hugging Face model with GPU acceleration."""
+        self._load_model()
+
+        # Format prompt for Mistral
+        if "mistral" in self.model_name.lower():
+            formatted_prompt = f"<s>[INST] {prompt} [/INST]"
+        else:
+            formatted_prompt = prompt
+
+        try:
+            # Generate response
+            outputs = self.pipeline(
+                formatted_prompt,
+                max_new_tokens=self.max_new_tokens,
+                temperature=self.temperature,
+                do_sample=True,
+                top_p=0.9,
+                repetition_penalty=1.1,
+                pad_token_id=self.tokenizer.eos_token_id
+            )
+
+            # Extract the generated text
+            generated_text = outputs[0]['generated_text']
+
+            # Remove the input prompt from the response
+            if formatted_prompt in generated_text:
+                response_text = generated_text[len(formatted_prompt):].strip()
+            else:
+                response_text = generated_text.strip()
+
+            return CompletionResponse(text=response_text)
+        except Exception as e:
+            print(f"Error during generation: {e}")
+            return CompletionResponse(text=f"Error: {str(e)}")
+
+    @spaces.GPU
+    def stream_complete(self, prompt: str, **kwargs: Any) -> CompletionResponseGen:
+        """Streaming completion - for now just return the complete response."""
+        response = self.complete(prompt, **kwargs)
+        yield response
+
+    @property
+    def metadata(self) -> Dict[str, Any]:
+        """Return metadata about the LLM."""
+        return {
+            "model_name": self.model_name,
+            "temperature": self.temperature,
+            "max_new_tokens": self.max_new_tokens,
+            "is_chat_model": False,
+            "is_function_calling_model": False,
+        }
+
+
 def setup_settings(config: Optional[ServiceConfig] = None) -> None:
     """Configure LlamaIndex global settings."""
     if config is None:
         config = ServiceConfig()
-    
-    # Set up LLM
-    Settings.llm = OpenAI(
+
+    # Set up LLM with Hugging Face model
+    Settings.llm = HuggingFaceLLM(
+        model_name=config.model_name,
         temperature=config.temperature,
-        model=config.model_name,
-        max_tokens=config.num_outputs
+        max_new_tokens=config.num_outputs
     )
-    
-    # Set up embedding model
-    Settings.embed_model = OpenAIEmbedding()
-    
+
+    # Set up embedding model with sentence transformers
+    Settings.embed_model = HuggingFaceEmbedding(
+        model_name="sentence-transformers/all-MiniLM-L6-v2",
+        device="auto"
+    )
+
     # Set chunk size
     Settings.chunk_size = config.chunk_size_limit
     Settings.chunk_overlap = config.max_chunk_overlap

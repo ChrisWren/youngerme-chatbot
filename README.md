@@ -7,6 +7,8 @@ sdk: gradio
 sdk_version: "5.44.1"
 app_file: chatbot.py
 pinned: false
+license: apache-2.0
+hardware: zero-gpu
 ---
 
 # Younger Me Chatbot
@@ -25,7 +27,12 @@ A gradio chatbot that allows you to chat with your younger self based on your pr
 4. Run the `chatbot.py` script to start the chatbot
 
 ## Requirements
-OpenAI API key set via the `OPENAI_API_KEY` environment variable.
+This app uses ZeroGPU for free GPU access through Hugging Face Spaces. No API keys required!
+
+The app uses:
+- **Mistral-7B-Instruct-v0.1** for text generation (7B parameters)
+- **sentence-transformers/all-MiniLM-L6-v2** for document embeddings
+- ZeroGPU hardware allocation through Hugging Face Spaces
 
 ## Contributing
 
